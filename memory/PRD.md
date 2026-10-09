@@ -27,3 +27,8 @@ Expo Router app, no backend. `src/db/schema.ts` (rooms, tenants, payments, cash_
 
 ## Backlog
 - P2: Deposit tracking; multi-property; bulk WA reminder for due tenants
+
+## Import ke workspace baru (Okt 2026)
+- Repo https://github.com/choirul378/kos.git (branch main, commit 59df09b) diimpor ke /app; dependency Expo dipasang via yarn.
+- Supervisor frontend: `yarn expo start --port 3000`. Pratinjau web diuji (iteration_4): semua alur utama lolos, tanpa perubahan kode.
+- Catatan: di web, data SQLite (sql.js) tidak tersimpan permanen; di HP data tersimpan permanen.
