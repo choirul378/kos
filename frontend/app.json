@@ -23,9 +23,10 @@
       },
       "package": "com.emergent.kamarkosoffline.m5xn7g",
       "permissions": [
-        "CAMERA",
-        "USE_BIOMETRIC",
-        "USE_FINGERPRINT"
+        "android.permission.CAMERA",
+        "android.permission.USE_BIOMETRIC",
+        "android.permission.USE_FINGERPRINT",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
@@ -69,6 +70,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "466b18f6-98eb-4266-9f01-c7ce7789b0d4"
+      }
+    },
+    "owner": "choirul378s-team"
   }
 }
