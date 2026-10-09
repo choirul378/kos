@@ -9,7 +9,7 @@ import { useFeedback } from "@/src/feedback";
 import { formatDate } from "@/src/format";
 import { useLock } from "@/src/lock";
 import { getProfile, saveProfile } from "@/src/settings";
-import { pickBackupFile, saveBackupToFolder, shareBackup } from "@/src/share";
+import { attachKtpPhotos, pickBackupFile, restoreKtpPhotos, saveBackupToFolder, shareBackup } from "@/src/share";
 import { makeStyles, useTheme } from "@/src/theme";
 import { Button, Card, Field, fs, haptic, Header, Icon, IconName, sp } from "@/src/ui";
 
@@ -32,10 +32,11 @@ export default function Settings() {
   };
 
   const doExport = (toFolder: boolean) => run(toFolder ? "folder" : "share", async () => {
-    const data = await exportAll();
-    const json = JSON.stringify(data, null, 2);
+    const data = await attachKtpPhotos(await exportAll());
+    const photoCount = Object.keys(data.photos ?? {}).length;
+    const json = JSON.stringify(data);
     const name = toFolder ? await saveBackupToFolder(json) : await shareBackup(json);
-    if (name) toast(`Backup dibuat: ${data.rooms.length} kamar, ${data.tenants.length} penghuni`);
+    if (name) toast(`Backup dibuat: ${data.rooms.length} kamar, ${data.tenants.length} penghuni, ${photoCount} foto KTP`);
   });
 
   const doImport = () => run("import", async () => {
@@ -44,13 +45,14 @@ export default function Settings() {
     let obj: unknown;
     try { obj = JSON.parse(text); } catch { throw new Error("File bukan backup JSON yang valid"); }
     if (!validateBackup(obj)) throw new Error("File bukan backup KosManager");
+    const photoCount = Object.keys(obj.photos ?? {}).length;
     const ok = await confirm({
       title: "Pulihkan data dari backup?",
-      message: `Backup tanggal ${formatDate(obj.exported_at)} berisi ${obj.rooms.length} kamar, ${obj.tenants.length} penghuni, ${obj.payments.length} pembayaran. SEMUA data saat ini akan diganti.`,
+      message: `Backup tanggal ${formatDate(obj.exported_at)} berisi ${obj.rooms.length} kamar, ${obj.tenants.length} penghuni, ${obj.payments.length} pembayaran, ${photoCount} foto KTP. SEMUA data saat ini akan diganti.`,
       confirmText: "Ganti & Pulihkan", destructive: true,
     });
     if (!ok) return;
-    await importAll(obj);
+    await importAll(await restoreKtpPhotos(obj));
     toast("Data berhasil dipulihkan");
   });
 
@@ -84,7 +86,7 @@ export default function Settings() {
         <Card>
           <View style={s.note}>
             <Icon name="information-circle-outline" size={20} color={colors.info} />
-            <Text style={s.noteText}>Semua data tersimpan offline di HP ini. Buat backup .json secara rutin dan simpan di tempat aman (Drive, email, atau flashdisk) untuk antisipasi ganti HP. Foto KTP tidak ikut di backup.</Text>
+            <Text style={s.noteText}>Semua data tersimpan offline di HP ini. Buat backup .json secara rutin dan simpan di tempat aman (Drive, email, atau flashdisk) untuk antisipasi ganti HP. Foto KTP ikut tersimpan di dalam backup.</Text>
           </View>
           <View style={{ gap: sp.sm }}>
             {Platform.OS === "android" && (
@@ -95,7 +97,7 @@ export default function Settings() {
           </View>
         </Card>
 
-        <Text style={s.footer}>KosManager v1.0 · 100% offline · Data milik Anda</Text>
+        <Text style={s.footer}>KosManager v1.0 · 100% offline · Data milik Anda{"\n"}Dibuat oleh: dskode.com</Text>
       </KeyboardAwareScrollView>
     </View>
   );

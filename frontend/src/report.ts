@@ -81,7 +81,7 @@ ${sumRow("Saldo bersih", summary.net, "net")}
 <tbody>${txRows(o.keluar, "−")}</tbody></table>
 
 <div class="foot">
-  <div>Dibuat otomatis oleh KosManager</div>
+  <div>Dibuat otomatis oleh KosManager<br/>Dibuat oleh: dskode.com</div>
   <div class="sign">Pengelola,<b>${esc(o.ownerName || "Pengelola " + o.kosName)}</b></div>
 </div>
 </body></html>`;

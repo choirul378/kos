@@ -4,6 +4,7 @@ import * as Sharing from "expo-sharing";
 import * as DocumentPicker from "expo-document-picker";
 import { Linking, Platform } from "react-native";
 
+import type { BackupData, Tenant } from "./db/repo";
 import { waLink } from "./format";
 
 export async function openWhatsApp(phone: string, text: string) {
@@ -81,4 +82,48 @@ export async function persistKtpPhoto(uri: string, base64?: string | null) {
   const target = `${dir}ktp_${Date.now()}.jpg`;
   await FileSystem.copyAsync({ from: uri, to: target });
   return target;
+}
+
+// Backup: baca semua foto KTP menjadi base64 agar ikut tersimpan di file JSON.
+export async function attachKtpPhotos(data: BackupData): Promise<BackupData> {
+  const photos: Record<string, string> = {};
+  for (const t of data.tenants) {
+    if (!t.ktp_photo) continue;
+    try {
+      if (t.ktp_photo.startsWith("data:")) {
+        photos[t.id] = t.ktp_photo.split(",")[1] ?? "";
+      } else if (Platform.OS !== "web") {
+        const info = await FileSystem.getInfoAsync(t.ktp_photo);
+        if (info.exists) photos[t.id] = await FileSystem.readAsStringAsync(t.ktp_photo, { encoding: FileSystem.EncodingType.Base64 });
+      }
+    } catch { /* foto rusak/hilang: lewati, data lain tetap di-backup */ }
+  }
+  return { ...data, version: 2, photos };
+}
+
+// Restore: tulis ulang foto dari backup ke penyimpanan internal & perbarui path di data penghuni.
+export async function restoreKtpPhotos(data: BackupData): Promise<BackupData> {
+  const photos = data.photos ?? {};
+  const dir = `${FileSystem.documentDirectory}ktp/`;
+  if (Platform.OS !== "web") await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => {});
+  const tenants: Tenant[] = [];
+  for (const t of data.tenants) {
+    const b64 = photos[t.id];
+    if (b64) {
+      if (Platform.OS === "web") {
+        tenants.push({ ...t, ktp_photo: `data:image/jpeg;base64,${b64}` });
+      } else {
+        const target = `${dir}ktp_restore_${t.id}_${Date.now()}.jpg`;
+        await FileSystem.writeAsStringAsync(target, b64, { encoding: FileSystem.EncodingType.Base64 });
+        tenants.push({ ...t, ktp_photo: target });
+      }
+    } else if (t.ktp_photo && !t.ktp_photo.startsWith("data:") && Platform.OS !== "web") {
+      // Backup lama (v1): path file dari HP lama tidak valid di sini → kosongkan bila tidak ada.
+      const info = await FileSystem.getInfoAsync(t.ktp_photo).catch(() => ({ exists: false }));
+      tenants.push({ ...t, ktp_photo: info.exists ? t.ktp_photo : null });
+    } else {
+      tenants.push(t);
+    }
+  }
+  return { ...data, tenants };
 }

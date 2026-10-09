@@ -20,7 +20,10 @@ Expo Router app, no backend. `src/db/schema.ts` (rooms, tenants, payments, cash_
 - Monthly cash-flow PDF report export (`src/report.ts`, Finance header + Rekap button)
 - "Jatuh Tempo 7 Hari ke Depan" list (`listDueSoon`, `src/components/DueList.tsx`) on Beranda & Penghuni tab, Lunas/DP/Belum badges, WA reminder, pay with period prefilled
 - Tested: iteration_2 all pass
+- Finance history filters (`src/components/FinanceFilterSheet.tsx`): kamar/penghuni (Pemasukan only, sewa only), date range replaces month picker, presets, validation
+- Backup v2 embeds KTP photos as base64 (`attachKtpPhotos`/`restoreKtpPhotos` in `src/share.ts`); v1 backups still import
+- Credit "Dibuat oleh: dskode.com" in Settings footer, receipt PDF & monthly report PDF
+- Tested: iteration_3 (filters verified E2E; backup verified by code review + self-test)
 
 ## Backlog
-- P1: Include KTP photos in backup (zip)
-- P2: Deposit tracking; multi-property; filters/sorting for transaction history
+- P2: Deposit tracking; multi-property; bulk WA reminder for due tenants

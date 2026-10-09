@@ -251,11 +251,24 @@ export type FinanceItem = {
   title: string; subtitle: string; amount: number; date: string;
 };
 
-export async function listFinance(period: string, type: CashType): Promise<FinanceItem[]> {
+export type FinanceFilter = {
+  type: CashType;
+  period?: string;          // YYYY-MM (dipakai jika from/to kosong)
+  from?: string; to?: string; // rentang tanggal YYYY-MM-DD (menggantikan bulan)
+  roomId?: number; tenantId?: number; // hanya berlaku untuk pembayaran sewa
+};
+
+export async function listFinance(f: FinanceFilter): Promise<FinanceItem[]> {
   const db = await getDb();
   const items: FinanceItem[] = [];
-  if (type === "masuk") {
-    const pays = await db.all<Payment>(`${PAY_SELECT} WHERE substr(p.pay_date, 1, 7) = ?`, [period]);
+  const range = f.from && f.to ? { from: f.from, to: f.to } : { from: `${f.period}-01`, to: `${f.period}-31` };
+  const onlyRent = !!(f.roomId || f.tenantId);
+  if (f.type === "masuk") {
+    const where = ["p.pay_date BETWEEN ? AND ?"];
+    const params: (string | number)[] = [range.from, range.to];
+    if (f.roomId) { where.push("p.room_id = ?"); params.push(f.roomId); }
+    if (f.tenantId) { where.push("p.tenant_id = ?"); params.push(f.tenantId); }
+    const pays = await db.all<Payment>(`${PAY_SELECT} WHERE ${where.join(" AND ")}`, params);
     pays.forEach((p) => items.push({
       key: "p" + p.id, kind: "sewa", id: p.id,
       title: `Sewa ${p.room_number ? "Kamar " + p.room_number : ""} · ${p.tenant_name ?? "-"}`,
@@ -263,14 +276,16 @@ export async function listFinance(period: string, type: CashType): Promise<Finan
       amount: p.amount, date: p.pay_date,
     }));
   }
-  const cash = await db.all<CashEntry>(
-    "SELECT * FROM cash_entries WHERE type = ? AND substr(date, 1, 7) = ?", [type, period],
-  );
-  cash.forEach((c) => items.push({
-    key: "c" + c.id, kind: type, id: c.id, title: c.category,
-    subtitle: c.description || (type === "masuk" ? "Pemasukan lain" : "Pengeluaran"),
-    amount: c.amount, date: c.date,
-  }));
+  if (!onlyRent) {
+    const cash = await db.all<CashEntry>(
+      "SELECT * FROM cash_entries WHERE type = ? AND date BETWEEN ? AND ?", [f.type, range.from, range.to],
+    );
+    cash.forEach((c) => items.push({
+      key: "c" + c.id, kind: f.type, id: c.id, title: c.category,
+      subtitle: c.description || (f.type === "masuk" ? "Pemasukan lain" : "Pengeluaran"),
+      amount: c.amount, date: c.date,
+    }));
+  }
   return items.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : b.id - a.id));
 }
 
@@ -365,14 +380,16 @@ export async function getDashboard(period = currentPeriod()) {
 
 // ───────────────────────── BACKUP & RESTORE ─────────────────────────
 export type BackupData = {
-  app: "kosmanager"; version: 1; exported_at: string;
+  app: "kosmanager"; version: 1 | 2; exported_at: string;
   rooms: Room[]; tenants: Tenant[]; payments: Payment[]; cash_entries: CashEntry[];
+  // v2: foto KTP (base64 JPEG) per tenant id, agar ikut pulih saat restore di HP lain.
+  photos?: Record<string, string>;
 };
 
 export async function exportAll(): Promise<BackupData> {
   const db = await getDb();
   return {
-    app: "kosmanager", version: 1, exported_at: now(),
+    app: "kosmanager", version: 2, exported_at: now(),
     rooms: await db.all<Room>("SELECT * FROM rooms"),
     tenants: await db.all<Tenant>("SELECT * FROM tenants"),
     payments: await db.all<Payment>("SELECT * FROM payments"),

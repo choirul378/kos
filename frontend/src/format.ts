@@ -115,6 +115,7 @@ td{padding:8px 0;border-bottom:1px solid #F3F4F6;font-size:14px}
 .total b{font-size:22px;color:#0F766E}
 .stamp{display:inline-block;margin-top:16px;padding:6px 14px;border-radius:999px;font-weight:700;font-size:13px;color:#fff;background:${lunas ? "#16A34A" : "#D97706"}}
 .sign{margin-top:40px;text-align:right;font-size:13px;color:#374151}
+.credit{margin-top:24px;text-align:center;font-size:11px;color:#9CA3AF}
 </style></head><body><div class="box">
 <h1>KUITANSI PEMBAYARAN</h1><h2>${esc(kosName)}</h2><div class="no">No. ${esc(p.receipt_no ?? "-")}</div>
 <table>
@@ -128,5 +129,5 @@ ${p.notes ? row("Catatan", p.notes) : ""}
 <div class="total"><span>Total Dibayar</span><b>${rupiah(p.amount)}</b></div>
 <span class="stamp">${lunas ? "LUNAS" : "DP / BELUM LUNAS"}</span>
 <div class="sign">Diterima oleh,<br/><br/><br/><b>${esc(ownerName || "Pengelola " + kosName)}</b></div>
-</div></body></html>`;
+</div><div class="credit">Dibuat oleh: dskode.com</div></body></html>`;
 }

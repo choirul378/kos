@@ -3,8 +3,9 @@ import { useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { FinanceFilterSheet, Filters, countFilters, hasRange, rangeLabel } from "@/src/components/FinanceFilterSheet";
 import { getDb } from "@/src/db/client";
-import { listFinance, monthSummary } from "@/src/db/repo";
+import { listFinance, listRooms, listTenants, monthSummary } from "@/src/db/repo";
 import { useFeedback } from "@/src/feedback";
 import { currentPeriod, formatDate, periodLabel, rupiah, shiftPeriod } from "@/src/format";
 import { useFocusData } from "@/src/hooks";
@@ -13,7 +14,7 @@ import { monthlyReportHtml } from "@/src/report";
 import { getProfile } from "@/src/settings";
 import { sharePdf } from "@/src/share";
 import { makeStyles, useTheme } from "@/src/theme";
-import { Button, Card, EmptyState, ErrorState, fs, Header, Icon, IconButton, Loading, MonthPicker, Segmented, sp } from "@/src/ui";
+import { Button, Card, EmptyState, ErrorState, fs, Header, Icon, IconButton, Loading, MonthPicker, rad, Segmented, sp } from "@/src/ui";
 
 type Tab = "masuk" | "keluar" | "rekap";
 
@@ -37,21 +38,33 @@ export default function FinanceScreen() {
   const [period, setPeriod] = useState(currentPeriod());
   const [tab, setTab] = useState<Tab>("masuk");
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [filters, setFilters] = useState<Filters>({});
+  const [sheetOpen, setSheetOpen] = useState(false);
   const bottomChrome = usesNativeTabs ? insets.bottom : 0;
+  const rangeOn = hasRange(filters);
+  const partiesOn = tab === "masuk" && !!(filters.roomId || filters.tenantId);
+  const filterCount = countFilters(filters, tab === "masuk");
+  const listFiltered = tab !== "rekap" && filterCount > 0;
 
   const { data, loading, error, refreshing, refresh, reload } = useFocusData(async () => {
-    const [summary, masuk, keluar, recap] = await Promise.all([
-      monthSummary(period), listFinance(period, "masuk"), listFinance(period, "keluar"), loadRecap(period),
+    const range = rangeOn ? { from: filters.from, to: filters.to } : {};
+    const [summary, masuk, keluar, recap, rooms, tenants] = await Promise.all([
+      monthSummary(period),
+      listFinance({ type: "masuk", period, ...range, roomId: filters.roomId, tenantId: filters.tenantId }),
+      listFinance({ type: "keluar", period, ...range }),
+      loadRecap(period), listRooms(), listTenants(),
     ]);
-    return { summary, masuk, keluar, recap };
-  }, [period]);
+    return { summary, masuk, keluar, recap, rooms, tenants };
+  }, [period, filters]);
 
   const exportPdf = async () => {
-    if (!data) return;
     setPdfBusy(true);
     try {
-      const [profile, occupancy] = await Promise.all([getProfile(), loadOccupancy()]);
-      const html = monthlyReportHtml({ period, ...profile, summary: data.summary, masuk: data.masuk, keluar: data.keluar, occupancy });
+      const [profile, occupancy, summary, masuk, keluar] = await Promise.all([
+        getProfile(), loadOccupancy(), monthSummary(period),
+        listFinance({ type: "masuk", period }), listFinance({ type: "keluar", period }),
+      ]);
+      const html = monthlyReportHtml({ period, ...profile, summary, masuk, keluar, occupancy });
       await sharePdf(html, `Laporan-${profile.kosName.replace(/[^\w]+/g, "-")}-${period}`, "Bagikan Laporan Bulanan");
     } catch (e: any) {
       toast(e?.message ?? "Gagal membuat PDF", "error");
@@ -62,38 +75,75 @@ export default function FinanceScreen() {
 
   const items = tab === "masuk" ? data?.masuk : data?.keluar;
   const maxBar = Math.max(1, ...(data?.recap ?? []).flatMap((r) => [r.income, r.expense]));
+  const sum = (xs?: { amount: number }[]) => (xs ?? []).reduce((a, b) => a + b.amount, 0);
+  // Kartu ringkasan mengikuti filter aktif; tanpa filter = rekap bulan terpilih.
+  const shown = listFiltered && data
+    ? { income: sum(data.masuk), expense: sum(data.keluar) }
+    : { income: data?.summary.income ?? 0, expense: data?.summary.expense ?? 0 };
+  const shownNet = shown.income - shown.expense;
+  const roomName = data?.rooms.find((r) => r.id === filters.roomId)?.number;
+  const tenantName = data?.tenants.find((t) => t.id === filters.tenantId)?.name;
 
   return (
     <View style={s.root} testID="finance-screen">
       <Header title="Keuangan" subtitle="Arus kas bulanan"
         right={<IconButton testID="finance-export-pdf" icon="document-text-outline" label="Export laporan PDF" onPress={exportPdf} />} />
       <View style={{ paddingHorizontal: sp.lg }}>
-        <MonthPicker testID="finance-month" value={period} onChange={setPeriod} />
+        {rangeOn && tab !== "rekap" ? (
+          <View testID="finance-range" style={s.range}>
+            <Icon name="calendar-outline" size={18} color={colors.brandPrimary} />
+            <Text testID="finance-range-label" style={s.rangeText} numberOfLines={1}>{rangeLabel(filters)}</Text>
+            <IconButton testID="finance-range-clear" icon="close" label="Hapus rentang tanggal" onPress={() => setFilters((f) => ({ ...f, from: undefined, to: undefined }))} />
+          </View>
+        ) : (
+          <MonthPicker testID="finance-month" value={period} onChange={setPeriod} />
+        )}
+        {tab !== "rekap" && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.filterBar} keyboardShouldPersistTaps="handled">
+            <Pressable testID="finance-filter-button" onPress={() => setSheetOpen(true)} style={[s.filterBtn, filterCount > 0 && s.filterBtnActive]}>
+              <Icon name="options-outline" size={16} color={filterCount > 0 ? colors.onBrandPrimary : colors.onSurfaceTertiary} />
+              <Text style={[s.filterBtnText, filterCount > 0 && { color: colors.onBrandPrimary }]}>Filter{filterCount > 0 ? ` (${filterCount})` : ""}</Text>
+            </Pressable>
+            {tab === "masuk" && !!filters.roomId && (
+              <Pressable testID="finance-chip-room" style={s.chip} onPress={() => setFilters((f) => ({ ...f, roomId: undefined }))}>
+                <Text style={s.chipText}>Kamar {roomName ?? ""}</Text><Icon name="close" size={14} color={colors.onBrandTertiary} />
+              </Pressable>
+            )}
+            {tab === "masuk" && !!filters.tenantId && (
+              <Pressable testID="finance-chip-tenant" style={s.chip} onPress={() => setFilters((f) => ({ ...f, tenantId: undefined }))}>
+                <Text style={s.chipText} numberOfLines={1}>{tenantName ?? "Penghuni"}</Text><Icon name="close" size={14} color={colors.onBrandTertiary} />
+              </Pressable>
+            )}
+          </ScrollView>
+        )}
       </View>
+      <FinanceFilterSheet visible={sheetOpen} onClose={() => setSheetOpen(false)} value={filters} onApply={setFilters}
+        rooms={data?.rooms ?? []} tenants={data?.tenants ?? []} showParties={tab === "masuk"} />
       {loading ? <Loading /> : error || !data ? <ErrorState message={error ?? ""} onRetry={reload} /> : (
         <ScrollView
           contentContainerStyle={{ padding: sp.lg, paddingBottom: sp.xl }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brandPrimary} />}
         >
           <Card style={s.summary} testID="finance-summary">
-            <Text style={s.sumLabel}>Saldo Bersih {periodLabel(period)}</Text>
-            <Text testID="finance-net-value" style={[s.sumValue, { color: data.summary.net < 0 ? colors.error : colors.brandPrimary }]}>{rupiah(data.summary.net)}</Text>
+            <Text style={s.sumLabel}>{listFiltered ? "Hasil Filter" : `Saldo Bersih ${periodLabel(period)}`}</Text>
+            <Text testID="finance-net-value" style={[s.sumValue, { color: shownNet < 0 ? colors.error : colors.brandPrimary }]}>{rupiah(shownNet)}</Text>
             <View style={s.sumRow}>
               <View style={s.sumCol}>
                 <View style={[s.dot, { backgroundColor: colors.success }]} />
                 <View>
                   <Text style={s.sumSmall}>Pemasukan</Text>
-                  <Text testID="finance-income-value" style={[s.sumAmt, { color: colors.success }]}>{rupiah(data.summary.income)}</Text>
+                  <Text testID="finance-income-value" style={[s.sumAmt, { color: colors.success }]}>{rupiah(shown.income)}</Text>
                 </View>
               </View>
               <View style={s.sumCol}>
                 <View style={[s.dot, { backgroundColor: colors.error }]} />
                 <View>
                   <Text style={s.sumSmall}>Pengeluaran</Text>
-                  <Text testID="finance-expense-value" style={[s.sumAmt, { color: colors.error }]}>{rupiah(data.summary.expense)}</Text>
+                  <Text testID="finance-expense-value" style={[s.sumAmt, { color: colors.error }]}>{rupiah(shown.expense)}</Text>
                 </View>
               </View>
             </View>
+            {partiesOn && <Text testID="finance-filter-note" style={s.note}>Filter kamar/penghuni hanya menampilkan pembayaran sewa.</Text>}
           </Card>
 
           <View style={{ marginTop: sp.lg }}>
@@ -134,11 +184,16 @@ export default function FinanceScreen() {
               </Card>
             </View>
           ) : !items?.length ? (
+            listFiltered ? (
+              <EmptyState testID={`finance-empty-${tab}`} icon="funnel-outline" title="Tidak ada transaksi yang cocok"
+                message="Coba ubah kamar, penghuni, atau rentang tanggal filter." actionLabel="Reset Filter" onAction={() => setFilters({})} />
+            ) : (
             <EmptyState testID={`finance-empty-${tab}`} icon={tab === "masuk" ? "arrow-down-circle-outline" : "arrow-up-circle-outline"}
               title={tab === "masuk" ? "Belum ada pemasukan" : "Belum ada pengeluaran"}
               message={tab === "masuk" ? "Pembayaran sewa & pemasukan lain bulan ini akan tampil di sini." : "Catat biaya listrik, air, internet, perbaikan, dan lainnya."}
               actionLabel={tab === "masuk" ? "Catat Pemasukan" : "Catat Pengeluaran"}
               onAction={() => router.push({ pathname: "/cash-form", params: { type: tab } })} />
+            )
           ) : (
             <Card style={{ marginTop: sp.lg, paddingVertical: sp.xs }}>
               {items.map((it, i) => {
@@ -191,6 +246,15 @@ const useStyles = makeStyles((c) => ({
   dot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
   sumSmall: { fontSize: fs.sm, color: c.muted },
   sumAmt: { fontSize: fs.lg, fontWeight: "800" },
+  note: { fontSize: fs.sm, color: c.muted, marginTop: sp.md },
+  range: { flexDirection: "row", alignItems: "center", gap: sp.sm, backgroundColor: c.brandTertiary, borderRadius: rad.md, paddingLeft: sp.md, padding: sp.xs, borderWidth: 1, borderColor: c.brandTertiary },
+  rangeText: { flex: 1, fontSize: fs.lg, fontWeight: "700", color: c.onBrandTertiary },
+  filterBar: { flexDirection: "row", alignItems: "center", gap: sp.sm, paddingVertical: sp.sm },
+  filterBtn: { flexDirection: "row", alignItems: "center", gap: 6, height: 36, paddingHorizontal: sp.md, borderRadius: rad.pill, backgroundColor: c.surfaceTertiary, borderWidth: 1, borderColor: c.border },
+  filterBtnActive: { backgroundColor: c.brandPrimary, borderColor: c.brandPrimary },
+  filterBtnText: { fontSize: fs.base, fontWeight: "700", color: c.onSurfaceTertiary },
+  chip: { flexDirection: "row", alignItems: "center", gap: 6, height: 36, paddingHorizontal: sp.md, borderRadius: rad.pill, backgroundColor: c.brandTertiary, maxWidth: 200 },
+  chipText: { fontSize: fs.base, fontWeight: "600", color: c.onBrandTertiary, flexShrink: 1 },
   cardTitle: { fontSize: fs.lg, fontWeight: "700", color: c.onSurface, marginBottom: sp.sm },
   recapRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: sp.sm, borderBottomWidth: 1, borderBottomColor: c.divider },
   recapLabel: { fontSize: fs.base, color: c.onSurfaceTertiary },
