@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "KosManager",
+    "name": "DSKos",
     "slug": "frontend",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -19,14 +19,16 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0F766E"
+        "backgroundImage": "./assets/images/adaptive-bg.png",
+        "backgroundColor": "#0A8C98"
       },
       "package": "com.emergent.kamarkosoffline.m5xn7g",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.BLUETOOTH_CONNECT"
       ]
     },
     "web": {
@@ -40,9 +42,9 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-image.png",
-          "imageWidth": 200,
+          "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#0F766E"
+          "backgroundColor": "#0A8C98"
         }
       ],
       "expo-font",

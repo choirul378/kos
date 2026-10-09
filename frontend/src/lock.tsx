@@ -74,7 +74,7 @@ export function LockProvider({ children }: { children: ReactNode }) {
 
   const tryBio = useCallback(async () => {
     if (!bioEnabled || !bioAvailable) return;
-    const r = await LocalAuthentication.authenticateAsync({ promptMessage: "Buka KosManager", cancelLabel: "Gunakan PIN" });
+    const r = await LocalAuthentication.authenticateAsync({ promptMessage: "Buka DSKos", cancelLabel: "Gunakan PIN" });
     if (r.success) { setError(null); setLocked(false); }
   }, [bioEnabled, bioAvailable]);
 

@@ -4,6 +4,7 @@ import { Platform, Pressable, Switch, Text, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { PrinterSettings } from "@/src/components/PrinterSettings";
 import { exportAll, importAll, validateBackup } from "@/src/db/repo";
 import { useFeedback } from "@/src/feedback";
 import { formatDate } from "@/src/format";
@@ -44,7 +45,7 @@ export default function Settings() {
     if (!text) return;
     let obj: unknown;
     try { obj = JSON.parse(text); } catch { throw new Error("File bukan backup JSON yang valid"); }
-    if (!validateBackup(obj)) throw new Error("File bukan backup KosManager");
+    if (!validateBackup(obj)) throw new Error("File bukan backup DSKos");
     const photoCount = Object.keys(obj.photos ?? {}).length;
     const ok = await confirm({
       title: "Pulihkan data dari backup?",
@@ -97,7 +98,10 @@ export default function Settings() {
           </View>
         </Card>
 
-        <Text style={s.footer}>KosManager v1.0 · 100% offline · Data milik Anda{"\n"}Dibuat oleh: dskode.com</Text>
+        <Text style={s.group}>PRINTER THERMAL</Text>
+        <PrinterSettings />
+
+        <Text style={s.footer}>DSKos v1.0 · 100% offline · Data milik Anda{"\n"}Dibuat oleh: dskode.com</Text>
       </KeyboardAwareScrollView>
     </View>
   );

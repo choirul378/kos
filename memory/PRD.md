@@ -32,3 +32,9 @@ Expo Router app, no backend. `src/db/schema.ts` (rooms, tenants, payments, cash_
 - Repo https://github.com/choirul378/kos.git (branch main, commit 59df09b) diimpor ke /app; dependency Expo dipasang via yarn.
 - Supervisor frontend: `yarn expo start --port 3000`. Pratinjau web diuji (iteration_4): semua alur utama lolos, tanpa perubahan kode.
 - Catatan: di web, data SQLite (sql.js) tidak tersimpan permanen; di HP data tersimpan permanen.
+
+## DSKos rebrand + Printer Thermal (Okt 2026)
+- Nama aplikasi: DSKos. Ikon/adaptive icon/favicon dibuat dari logo user; splash native (logo putih di teal) + intro animasi gradien (src/components/IntroSplash.tsx).
+- Printer thermal Bluetooth (Android, SPP/ESC-POS): modul native lokal modules/bt-printer (Kotlin), logika src/thermal.ts, pengaturan src/components/PrinterSettings.tsx (pilih printer ter-pair, kertas 58/80mm, tes cetak), tombol "Cetak Printer Thermal" di kuitansi.
+- APK build EAS: https://expo.dev/artifacts/eas/1kdRZ8ghLTeKkLNCXrskZAy8_vgSp9Ls_v-vzZjzgkI.apk
+- Belum diuji di HP/printer nyata.

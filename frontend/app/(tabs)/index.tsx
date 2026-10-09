@@ -48,7 +48,7 @@ export default function Home() {
       <View style={[s.header, { paddingTop: insets.top + sp.sm }]}>
         <View style={{ flex: 1 }}>
           <Text style={s.hello}>Selamat datang 👋</Text>
-          <Text testID="home-kos-name" style={s.kosName} numberOfLines={1}>{data?.kosName ?? "KosManager"}</Text>
+          <Text testID="home-kos-name" style={s.kosName} numberOfLines={1}>{data?.kosName ?? "DSKos"}</Text>
         </View>
         <IconButton testID="home-settings-button" icon="settings-outline" label="Pengaturan" onPress={() => router.push("/settings")} />
       </View>

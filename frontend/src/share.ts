@@ -48,7 +48,7 @@ export async function shareBackup(json: string) {
   }
   const uri = `${FileSystem.documentDirectory}${name}`;
   await FileSystem.writeAsStringAsync(uri, json);
-  await Sharing.shareAsync(uri, { mimeType: "application/json", dialogTitle: "Simpan Backup KosManager" });
+  await Sharing.shareAsync(uri, { mimeType: "application/json", dialogTitle: "Simpan Backup DSKos" });
   return name;
 }
 

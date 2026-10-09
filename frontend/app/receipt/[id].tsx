@@ -9,6 +9,7 @@ import { formatDate, periodLabel, receiptHtml, receiptText, rupiah } from "@/src
 import { useFocusData } from "@/src/hooks";
 import { getProfile } from "@/src/settings";
 import { openWhatsApp, sharePdf } from "@/src/share";
+import { printReceipt } from "@/src/thermal";
 import { makeStyles, useTheme } from "@/src/theme";
 import { Button, ErrorState, fs, Header, Icon, IconButton, Loading, rad, sp } from "@/src/ui";
 
@@ -21,6 +22,7 @@ export default function Receipt() {
   const s = useStyles();
   const { toast, confirm } = useFeedback();
   const [pdfBusy, setPdfBusy] = useState(false);
+  const [printBusy, setPrintBusy] = useState(false);
 
   const { data, loading, error, reload } = useFocusData(async () => {
     const [p, profile] = await Promise.all([getPayment(pid), getProfile()]);
@@ -45,6 +47,20 @@ export default function Receipt() {
       toast(e?.message ?? "Gagal membuat PDF", "error");
     } finally {
       setPdfBusy(false);
+    }
+  };
+
+  const thermal = async () => {
+    setPrintBusy(true);
+    try {
+      await printReceipt(p, kosName, ownerName);
+      toast("Kuitansi dikirim ke printer");
+    } catch (e: any) {
+      const msg = e?.message ?? "Gagal mencetak";
+      toast(msg, "error");
+      if (msg.includes("belum dipilih")) router.push("/settings");
+    } finally {
+      setPrintBusy(false);
     }
   };
 
@@ -88,6 +104,7 @@ export default function Receipt() {
         <View style={{ gap: sp.md, marginTop: sp.xl }}>
           <Button testID="receipt-whatsapp-button" variant="whatsapp" icon="logo-whatsapp" title="Kirim via WhatsApp"
             onPress={() => openWhatsApp(p.tenant_phone ?? "", receiptText(p, kosName, ownerName))} />
+          <Button testID="receipt-thermal-button" icon="print-outline" title="Cetak Printer Thermal" loading={printBusy} onPress={thermal} />
           <Button testID="receipt-pdf-button" variant="secondary" icon="document-text-outline" title="Simpan / Bagikan PDF" loading={pdfBusy} onPress={pdf} />
           <Button testID="receipt-delete-button" variant="danger" icon="trash-outline" title="Hapus Pembayaran" onPress={remove} />
         </View>
