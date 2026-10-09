@@ -1,0 +1,51 @@
+# KosManager — PRD
+
+## Original Problem
+Offline Android boarding-house (kos) management app: dashboard, rooms CRUD, tenants (KTP photo, active/alumni), rent payments (lunas/DP, WhatsApp billing, per-tenant/room history, receipt via WA text or PDF), expenses & monthly cash-flow report, PIN/biometric lock, JSON export/import. Output: folder architecture, SQLite schema with relations, CRUD code, simple UI.
+
+## User Choices
+SQLite local (expo-sqlite), PIN 4–6 + biometric, JSON backup, clean light teal UI, Rupiah & Bahasa Indonesia.
+
+## Architecture
+Expo Router app, no backend. `src/db/schema.ts` (rooms, tenants, payments, cash_entries + FKs), `client.ts` (expo-sqlite) / `client.web.ts` (sql.js for web preview), `repo.ts` CRUD. Lock overlay (`src/lock.tsx`), feedback toasts/dialogs, share utils (WA, expo-print PDF, backup). Docs: `/app/ARCHITECTURE.md`.
+
+## Implemented (Jun 2026)
+- 4 tabs: Beranda, Kamar, Penghuni, Keuangan + Settings, PIN setup
+- Room/Tenant/Payment/Cash CRUD, auto room status sync, arrears detection, receipt numbers
+- WhatsApp billing & receipt text, PDF receipt share
+- 6-month cash-flow recap, category breakdown
+- PIN + biometric, auto-relock after 30s in background
+- JSON export (share / Android folder) & import
+- Tested: iteration_1 all pass
+- Monthly cash-flow PDF report export (`src/report.ts`, Finance header + Rekap button)
+- "Jatuh Tempo 7 Hari ke Depan" list (`listDueSoon`, `src/components/DueList.tsx`) on Beranda & Penghuni tab, Lunas/DP/Belum badges, WA reminder, pay with period prefilled
+- Tested: iteration_2 all pass
+- Finance history filters (`src/components/FinanceFilterSheet.tsx`): kamar/penghuni (Pemasukan only, sewa only), date range replaces month picker, presets, validation
+- Backup v2 embeds KTP photos as base64 (`attachKtpPhotos`/`restoreKtpPhotos` in `src/share.ts`); v1 backups still import
+- Credit "Dibuat oleh: dskode.com" in Settings footer, receipt PDF & monthly report PDF
+- Tested: iteration_3 (filters verified E2E; backup verified by code review + self-test)
+
+## Backlog
+- P2: Deposit tracking; multi-property; bulk WA reminder for due tenants
+
+## Import ke workspace baru (Okt 2026)
+- Repo https://github.com/choirul378/kos.git (branch main, commit 59df09b) diimpor ke /app; dependency Expo dipasang via yarn.
+- Supervisor frontend: `yarn expo start --port 3000`. Pratinjau web diuji (iteration_4): semua alur utama lolos, tanpa perubahan kode.
+- Catatan: di web, data SQLite (sql.js) tidak tersimpan permanen; di HP data tersimpan permanen.
+
+## DSKos rebrand + Printer Thermal (Okt 2026)
+- Nama aplikasi: DSKos. Ikon/adaptive icon/favicon dibuat dari logo user; splash native (logo putih di teal) + intro animasi gradien (src/components/IntroSplash.tsx).
+- Printer thermal Bluetooth (Android, SPP/ESC-POS): modul native lokal modules/bt-printer (Kotlin), logika src/thermal.ts, pengaturan src/components/PrinterSettings.tsx (pilih printer ter-pair, kertas 58/80mm, tes cetak), tombol "Cetak Printer Thermal" di kuitansi.
+- APK build EAS: https://expo.dev/artifacts/eas/1kdRZ8ghLTeKkLNCXrskZAy8_vgSp9Ls_v-vzZjzgkI.apk
+- Belum diuji di HP/printer nyata.
+
+## Kuitansi JPG (Okt 2026)
+- Tombol "Simpan / Bagikan PDF" di layar kuitansi diganti "Simpan / Bagikan JPG" (react-native-view-shot + expo-sharing). Kartu JPG: src/components/ReceiptImage.tsx. Di web menampilkan pesan khusus APK.
+- APK terbaru: https://expo.dev/artifacts/eas/mXQ1HHbCsN-kbS_6Xa1huGXtGf1A8AUctoeYG_AByzQ.apk
+- Laporan bulanan tetap PDF (tidak diubah).
+
+## Update (Jun 2026) – Bluetooth permission fix
+- Imported latest branch `conflict_091026_1738` (DSKos with thermal printer).
+- Fixed crash "Need android.permission.BLUETOOTH_SCAN ... cancelDiscovery": native module no longer calls cancelDiscovery unless SCAN granted & discovering; only BLUETOOTH_CONNECT requested (check → request → "Buka Pengaturan" if blocked); BLUETOOTH_SCAN removed/blocked in manifest; SecurityException mapped to friendly messages.
+- Removed leftover scaffold app/index.tsx that hid the real home screen.
+- Needs rebuild via Emergent Publish and real Android 12+ test.

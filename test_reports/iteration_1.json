@@ -1,0 +1,31 @@
+{
+  "summary": "First-run frontend-only (Expo web preview) smoke of KosManager offline app at 390x844. Tested Dashboard stats + hero + arrears + quick actions, Rooms CRUD + duplicate guard + filter chips, Tenants CRUD + search + room-assignment, Payment flow (prefill = rent, partial => DP receipt), Finance tab (summary, segmented tabs, month nav, add expense updates expense/net), Settings (profile save, PIN setup, lock on reload, wrong-PIN error, correct-PIN unlock, remove PIN), and JSON backup export (download triggered, no error toast). Core flows all passed. One deprecated web warning only.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "home", "issues": ["Period on dashboard reads 'Oktober 2026' because container clock is Oct 2026 - cosmetic only; no code fix needed."]}
+    ],
+    "react_native_issues": [
+      {"component": "RNW styles", "issue": "Console: '\"shadow*\" style props are deprecated. Use \"boxShadow\"' and 'props.pointerEvents is deprecated. Use style.pointerEvents' - web-only React Native deprecation warnings; harmless but should be migrated. Reference: library-wide (likely in /app/frontend/src/ui.tsx and /app/frontend/src/theme.ts shadow styles)."}
+    ]
+  },
+  "test_report_links": ["/app/.screenshots/final3.png", "/app/.screenshots/pin_lock_final.png"],
+  "action_items": [
+    "(Low) Replace RN shadow* style props with boxShadow for web and migrate pointerEvents to style.pointerEvents to clear console deprecation warnings.",
+    "(Info) PIN confirm step auto-submits once 4 digits are entered - test scripts should not rely on setup-pin-submit for the confirmation step; current behavior is correct and user-friendly."
+  ],
+  "critical_code_review_comments": [
+    "Rooms list uses prefix testID 'room-card-{id}' and 'room-card-{id}-status' - selecting with [data-testid^=room-card-] matches both; benign but note for future tests to filter out '-status' suffix.",
+    "(tabs)/_layout.tsx bottom tabs are hidden when inside non-tab routes (tenant/[id], room/[id], settings, forms) - this is expected Expo Router behavior; UI tests must use goto() or back nav instead of clicking tabs from inside stack screens.",
+    "Dashboard period uses system date (Oktober 2026 shown) which is fine, but if the container clock differs from user device clock, Keuangan screen may default to a different month than user expects."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "Added Room A1 (Rp 1.500.000) and Tenant 'Budi Santoso' (081234567890) assigned to A1 with entry 2026-01-05, 1 partial payment Rp 500.000 (DP) with receipt No. KW/202610/0001, and 1 expense Rp 250.000. PIN 1234 was set then removed in the final cleanup pass (left set in the final isolated PIN-session test; data is in localStorage['kosmanager_web_db']).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Browser isolates localStorage per automation tool call; to test PIN lock-on-reload you MUST do setup + reload + unlock inside a SINGLE mcp_browser_automation script. Bottom tabs (data-testid tab-index/tab-rooms/tab-tenants/tab-finance) are only visible on the (tabs) screens - use absolute URL navigation (page.goto('/rooms')) to switch when inside detail or form screens. Receipt status for partial payment is literally 'DP / BELUM LUNAS'. Backup export filename is kosmanager-backup-YYYYMMDD-HHMM.json. All critical flows passed; only cosmetic RNW deprecation warnings remain.",
+  "rca_of_issue": "N/A - no bugs found. Earlier test iteration appeared to show 'tenant saved without room' and 'room not Terisi' but RCA revealed the tenant-room Chips first option is 'tenant-room-none' (Belum ada); selecting index 0 picked 'none'. After choosing a non-'none' chip, room assignment, Terisi status, and arrears/receipt all behaved correctly."
+}

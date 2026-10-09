@@ -1,0 +1,165 @@
+{
+  "app_name": "KosManager",
+  "personality": "1 iOS-Native Clean",
+  "personality_one_liner": "Bersih, terang, dan ramah dengan sentuhan hijau teal untuk memberi rasa aman dan teratur pada pengguna awam.",
+  "color": {
+    "surface": "#FAFAFA",
+    "onSurface": "#1A1F1C",
+    "surfaceSecondary": "#FFFFFF",
+    "onSurfaceSecondary": "#1A1F1C",
+    "surfaceTertiary": "#F4F5F7",
+    "onSurfaceTertiary": "#374151",
+    "surfaceInverse": "#1A1F1C",
+    "onSurfaceInverse": "#FFFFFF",
+    "brand": "#0F766E",
+    "onBrand": "#FFFFFF",
+    "brandPrimary": "#0F766E",
+    "onBrandPrimary": "#FFFFFF",
+    "brandSecondary": "#047857",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "#CCFBF1",
+    "onBrandTertiary": "#0F766E",
+    "success": "#16A34A",
+    "onSuccess": "#FFFFFF",
+    "warning": "#D97706",
+    "onWarning": "#FFFFFF",
+    "error": "#DC2626",
+    "onError": "#FFFFFF",
+    "info": "#0284C7",
+    "onInfo": "#FFFFFF",
+    "border": "#E5E7EB",
+    "borderStrong": "#D1D5DB",
+    "divider": "#F3F4F6",
+    "muted": "#6B7280"
+  },
+  "typography": {
+    "displayFontFamily": "PlusJakartaSans_500Medium",
+    "textFontFamily": "PlusJakartaSans_400Regular",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Generous padding around content, clear grouping. Use md and lg for inner card padding, xl for screen edges.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": 1,
+  "navigation": "bottom_tabs",
+  "icon_set": "Phosphor",
+  "glassmorphism": {
+    "enabled": false,
+    "do's": [],
+    "dont's": ["Do not use glassmorphism for this app. Keep it flat and clean for maximum performance on Android."]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "haptics": {
+    "events": {
+      "button_press": "light",
+      "tab_change": "light",
+      "success_action": "notification_success",
+      "error_action": "notification_error",
+      "toggle_switch": "selection"
+    }
+  },
+  "screens": [
+    {
+      "name": "Beranda",
+      "purpose": "Dashboard showing overview of boarding house occupancy, revenue, and quick actions.",
+      "states": {
+        "loading": "Centered spinner with teal brand color.",
+        "empty": "Should not be empty, but show 0 for metrics if no data.",
+        "error": "Card displaying error message with a retry button."
+      },
+      "layout": "Hero card at the top displaying total income (Pemasukan) with a soft background image and top-to-bottom gradient scrim. Below it, a 2-column grid for occupancy stats (Terisi, Kosong, Menunggak). Then a horizontal scroll of Quick Actions (Tambah Penghuni, Catat Bayar). Followed by a list of recent activities/transactions."
+    },
+    {
+      "name": "Kamar",
+      "purpose": "CRUD for rooms, showing statuses, types, and prices.",
+      "states": {
+        "loading": "Skeleton list of rooms.",
+        "empty": "Illustration of an empty room with a 'Tambah Kamar' CTA.",
+        "error": "Readable message with a retry button."
+      },
+      "layout": "List layout. Each list item is a card (surfaceSecondary) showing Room Number, Status (badge), and Price. Floating Action Button (FAB) at bottom right for Add Room."
+    },
+    {
+      "name": "Penghuni",
+      "purpose": "CRUD for tenants, including capturing KTP photos.",
+      "states": {
+        "loading": "Skeleton list with circular avatars.",
+        "empty": "Illustration of empty state with a 'Tambah Penghuni' CTA.",
+        "error": "Readable message with a retry button."
+      },
+      "layout": "List of tenants. Each row has an initial avatar (tinted brandTertiary), Name, Phone, Room Number, and Status. Tapping opens a detail sheet showing KTP photo and full info. FAB at bottom right to add tenant."
+    },
+    {
+      "name": "Keuangan",
+      "purpose": "Financial reports, expenses logging, and cash flow overview.",
+      "states": {
+        "loading": "Centered spinner.",
+        "empty": "Empty state illustration with 'Catat Pengeluaran' CTA.",
+        "error": "Readable message with a retry button."
+      },
+      "layout": "Top section shows a summary card of Net Cash Flow. Segmented control to switch between 'Pemasukan' (Income) and 'Pengeluaran' (Expenses). A list of transactions below. Sticky primary CTA at the bottom to 'Catat Pengeluaran'."
+    },
+    {
+      "name": "Pengaturan",
+      "purpose": "App settings including PIN/Biometric lock and Backup/Restore.",
+      "states": {
+        "loading": "Centered spinner.",
+        "empty": "N/A",
+        "error": "Readable message with a retry button."
+      },
+      "layout": "Simple list of settings options (Security, Backup, Restore). Each row uses an icon (tinted brandTertiary container), title, and chevron/switch. Standard iOS-Native clean list spacing."
+    }
+  ],
+  "images": {
+    "hero_dashboard": {
+      "url": "https://images.unsplash.com/photo-1616486029423-aaa4789e8c9a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1ODB8MHwxfHNlYXJjaHwyfHxicmlnaHQlMjBtb2Rlcm4lMjBiZWRyb29tJTIwaW50ZXJpb3J8ZW58MHx8fHwxNzkxNTIwNTI2fDA&ixlib=rb-4.1.0&q=85",
+      "alt": "Bright modern bedroom interior for dashboard background"
+    },
+    "empty_state_general": {
+      "url": "https://images.unsplash.com/photo-1625585598750-3535fe40efb3?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAxODF8MHwxfHNlYXJjaHwyfHx3aGl0ZSUyMGFlc3RoZXRpYyUyMGVtcHR5JTIwcm9vbXxlbnwwfHx8fDE3OTE1MjA1MjZ8MA&ixlib=rb-4.1.0&q=85",
+      "alt": "Clean empty room with a stool and plant for empty states"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Strictly adhere to the color palette. No blues, no purples. The primary color is Teal (#0F766E).",
+    "Since this is an Android-first offline app, prioritize fast, flat components. Glassmorphism is explicitly disabled to ensure snappy performance on lower-end Android devices.",
+    "Implement the PIN 4-6 digit / Biometric check on app launch or resume.",
+    "For the dashboard hero card, ensure you use the 'hero_dashboard' image with a top-to-bottom gradient scrim (transparent to surfaceInverse) so the white text (onSurfaceInverse) remains highly readable.",
+    "All form inputs should use surfaceTertiary background with no borders (or very subtle borders) and labels positioned above the inputs.",
+    "Ensure touch targets are at least 44x44pt.",
+    "Implement Whatsapp billing message generator using deep linking (e.g., `whatsapp://send?phone=...&text=...`).",
+    "Backup/Restore JSON must be implemented using `expo-file-system` and `expo-sharing` or document picker.",
+    "Use Phosphor icons consistently across all screens, keeping a single weight/style.",
+    "In the Kamar and Penghuni tabs, ensure empty states are implemented as specified taking full screen height with an illustration, text, and action button."
+  ]
+}
