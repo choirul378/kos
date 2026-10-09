@@ -95,39 +95,3 @@ export function receiptText(p: Payment, kosName: string, ownerName: string) {
     `Terima kasih atas pembayarannya 🙏`,
   ].filter((l) => l !== null).join("\n");
 }
-
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
-
-export function receiptHtml(p: Payment, kosName: string, ownerName: string) {
-  const row = (k: string, v: string) => `<tr><td class="k">${k}</td><td class="v">${esc(v)}</td></tr>`;
-  const lunas = p.status === "lunas";
-  return `<!DOCTYPE html><html><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<style>
-body{font-family:Helvetica,Arial,sans-serif;color:#1A1F1C;padding:32px;}
-.box{border:2px solid #0F766E;border-radius:16px;padding:28px;max-width:560px;margin:0 auto;}
-h1{margin:0;color:#0F766E;font-size:22px;letter-spacing:1px}
-h2{margin:4px 0 0;font-size:16px;font-weight:600}
-.no{color:#6B7280;font-size:12px;margin-top:6px}
-table{width:100%;border-collapse:collapse;margin-top:20px}
-td{padding:8px 0;border-bottom:1px solid #F3F4F6;font-size:14px}
-.k{color:#6B7280;width:40%}.v{font-weight:600;text-align:right}
-.total{margin-top:20px;background:#CCFBF1;border-radius:12px;padding:16px;display:flex;justify-content:space-between;align-items:center}
-.total b{font-size:22px;color:#0F766E}
-.stamp{display:inline-block;margin-top:16px;padding:6px 14px;border-radius:999px;font-weight:700;font-size:13px;color:#fff;background:${lunas ? "#16A34A" : "#D97706"}}
-.sign{margin-top:40px;text-align:right;font-size:13px;color:#374151}
-.credit{margin-top:24px;text-align:center;font-size:11px;color:#9CA3AF}
-</style></head><body><div class="box">
-<h1>KUITANSI PEMBAYARAN</h1><h2>${esc(kosName)}</h2><div class="no">No. ${esc(p.receipt_no ?? "-")}</div>
-<table>
-${row("Tanggal Bayar", formatDate(p.pay_date))}
-${row("Nama Penghuni", p.tenant_name ?? "-")}
-${row("Kamar", p.room_number ?? "-")}
-${row("Periode Sewa", periodLabel(p.period))}
-${row("Metode", p.method)}
-${p.notes ? row("Catatan", p.notes) : ""}
-</table>
-<div class="total"><span>Total Dibayar</span><b>${rupiah(p.amount)}</b></div>
-<span class="stamp">${lunas ? "LUNAS" : "DP / BELUM LUNAS"}</span>
-<div class="sign">Diterima oleh,<br/><br/><br/><b>${esc(ownerName || "Pengelola " + kosName)}</b></div>
-</div><div class="credit">Dibuat oleh: dskode.com</div></body></html>`;
-}

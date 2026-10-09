@@ -38,3 +38,8 @@ Expo Router app, no backend. `src/db/schema.ts` (rooms, tenants, payments, cash_
 - Printer thermal Bluetooth (Android, SPP/ESC-POS): modul native lokal modules/bt-printer (Kotlin), logika src/thermal.ts, pengaturan src/components/PrinterSettings.tsx (pilih printer ter-pair, kertas 58/80mm, tes cetak), tombol "Cetak Printer Thermal" di kuitansi.
 - APK build EAS: https://expo.dev/artifacts/eas/1kdRZ8ghLTeKkLNCXrskZAy8_vgSp9Ls_v-vzZjzgkI.apk
 - Belum diuji di HP/printer nyata.
+
+## Kuitansi JPG (Okt 2026)
+- Tombol "Simpan / Bagikan PDF" di layar kuitansi diganti "Simpan / Bagikan JPG" (react-native-view-shot + expo-sharing). Kartu JPG: src/components/ReceiptImage.tsx. Di web menampilkan pesan khusus APK.
+- APK terbaru: https://expo.dev/artifacts/eas/mXQ1HHbCsN-kbS_6Xa1huGXtGf1A8AUctoeYG_AByzQ.apk
+- Laporan bulanan tetap PDF (tidak diubah).

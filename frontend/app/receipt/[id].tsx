@@ -1,14 +1,17 @@
+import * as FileSystem from "expo-file-system/legacy";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import * as Sharing from "expo-sharing";
+import { useRef, useState } from "react";
+import { Platform, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { deletePayment, getPayment } from "@/src/db/repo";
+import { ReceiptImage } from "@/src/components/ReceiptImage";
 import { useFeedback } from "@/src/feedback";
-import { formatDate, periodLabel, receiptHtml, receiptText, rupiah } from "@/src/format";
+import { formatDate, periodLabel, receiptText, rupiah } from "@/src/format";
 import { useFocusData } from "@/src/hooks";
 import { getProfile } from "@/src/settings";
-import { openWhatsApp, sharePdf } from "@/src/share";
+import { openWhatsApp } from "@/src/share";
 import { printReceipt } from "@/src/thermal";
 import { makeStyles, useTheme } from "@/src/theme";
 import { Button, ErrorState, fs, Header, Icon, IconButton, Loading, rad, sp } from "@/src/ui";
@@ -21,8 +24,9 @@ export default function Receipt() {
   const { colors } = useTheme();
   const s = useStyles();
   const { toast, confirm } = useFeedback();
-  const [pdfBusy, setPdfBusy] = useState(false);
   const [printBusy, setPrintBusy] = useState(false);
+  const [imgBusy, setImgBusy] = useState(false);
+  const imgRef = useRef<View>(null);
 
   const { data, loading, error, reload } = useFocusData(async () => {
     const [p, profile] = await Promise.all([getPayment(pid), getProfile()]);
@@ -39,17 +43,6 @@ export default function Receipt() {
     <View style={s.row}><Text style={s.k}>{k}</Text><Text testID={tid} style={s.v}>{v}</Text></View>
   );
 
-  const pdf = async () => {
-    setPdfBusy(true);
-    try {
-      await sharePdf(receiptHtml(p, kosName, ownerName), `Kuitansi-${(p.receipt_no ?? String(p.id)).replace(/\//g, "-")}`);
-    } catch (e: any) {
-      toast(e?.message ?? "Gagal membuat PDF", "error");
-    } finally {
-      setPdfBusy(false);
-    }
-  };
-
   const thermal = async () => {
     setPrintBusy(true);
     try {
@@ -61,6 +54,24 @@ export default function Receipt() {
       if (msg.includes("belum dipilih")) router.push("/settings");
     } finally {
       setPrintBusy(false);
+    }
+  };
+
+  const jpg = async () => {
+    setImgBusy(true);
+    try {
+      if (Platform.OS === "web") throw new Error("Di pratinjau web kuitansi tidak bisa dijadikan JPG. Gunakan aplikasi Android (APK)");
+      const ref = imgRef.current;
+      if (!ref) throw new Error("Kartu kuitansi belum siap, coba lagi");
+      const { captureRef } = require("react-native-view-shot");
+      const uri = await captureRef(ref, { format: "jpg", quality: 0.95 });
+      const dest = `${(FileSystem as any).cacheDirectory}Kuitansi-${(p.receipt_no ?? String(p.id)).replace(/\//g, "-")}.jpg`;
+      await FileSystem.copyAsync({ from: uri, to: dest });
+      await Sharing.shareAsync(dest, { mimeType: "image/jpeg", dialogTitle: "Simpan / Bagikan Kuitansi JPG" });
+    } catch (e: any) {
+      toast(e?.message ?? "Gagal membuat JPG", "error");
+    } finally {
+      setImgBusy(false);
     }
   };
 
@@ -105,16 +116,20 @@ export default function Receipt() {
           <Button testID="receipt-whatsapp-button" variant="whatsapp" icon="logo-whatsapp" title="Kirim via WhatsApp"
             onPress={() => openWhatsApp(p.tenant_phone ?? "", receiptText(p, kosName, ownerName))} />
           <Button testID="receipt-thermal-button" icon="print-outline" title="Cetak Printer Thermal" loading={printBusy} onPress={thermal} />
-          <Button testID="receipt-pdf-button" variant="secondary" icon="document-text-outline" title="Simpan / Bagikan PDF" loading={pdfBusy} onPress={pdf} />
+          <Button testID="receipt-jpg-button" variant="secondary" icon="image-outline" title="Simpan / Bagikan JPG" loading={imgBusy} onPress={jpg} />
           <Button testID="receipt-delete-button" variant="danger" icon="trash-outline" title="Hapus Pembayaran" onPress={remove} />
         </View>
       </ScrollView>
+      <View ref={imgRef} style={s.offscreen} pointerEvents="none">
+        <ReceiptImage p={p} kosName={kosName} ownerName={ownerName} />
+      </View>
     </View>
   );
 }
 
 const useStyles = makeStyles((c) => ({
   root: { flex: 1, backgroundColor: c.surface },
+  offscreen: { position: "absolute", left: -1000, top: 0, opacity: 0.99 },
   paper: { backgroundColor: c.surfaceSecondary, borderRadius: rad.lg, padding: sp.xl, borderWidth: 2, borderColor: c.brandTertiary },
   top: { flexDirection: "row", gap: sp.md, alignItems: "center" },
   iconWrap: { width: 48, height: 48, borderRadius: 24, backgroundColor: c.brandTertiary, alignItems: "center", justifyContent: "center" },
