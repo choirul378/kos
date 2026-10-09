@@ -13,7 +13,7 @@ import { Button, Card, Chips, EmptyState, Field, fs, Header, Label, Loading, Mon
 const METHODS = ["Tunai", "Transfer", "QRIS", "E-Wallet"];
 
 export default function PaymentForm() {
-  const { tenantId, id } = useLocalSearchParams<{ tenantId?: string; id?: string }>();
+  const { tenantId, id, period: periodParam } = useLocalSearchParams<{ tenantId?: string; id?: string; period?: string }>();
   const editId = id ? Number(id) : undefined;
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -23,7 +23,7 @@ export default function PaymentForm() {
   const [saving, setSaving] = useState(false);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenant, setTenant] = useState<string | null>(tenantId ?? null);
-  const [period, setPeriod] = useState(currentPeriod());
+  const [period, setPeriod] = useState(periodParam && /^\d{4}-\d{2}$/.test(periodParam) ? periodParam : currentPeriod());
   const [payDate, setPayDate] = useState(todayISO());
   const [amount, setAmount] = useState("");
   const [status, setStatus] = useState<PayStatus>("lunas");

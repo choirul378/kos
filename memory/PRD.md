@@ -17,7 +17,10 @@ Expo Router app, no backend. `src/db/schema.ts` (rooms, tenants, payments, cash_
 - PIN + biometric, auto-relock after 30s in background
 - JSON export (share / Android folder) & import
 - Tested: iteration_1 all pass
+- Monthly cash-flow PDF report export (`src/report.ts`, Finance header + Rekap button)
+- "Jatuh Tempo 7 Hari ke Depan" list (`listDueSoon`, `src/components/DueList.tsx`) on Beranda & Penghuni tab, Lunas/DP/Belum badges, WA reminder, pay with period prefilled
+- Tested: iteration_2 all pass
 
 ## Backlog
-- P1: Include KTP photos in backup (zip); monthly report PDF export
-- P2: Automatic reminder list by due date per tenant entry date; deposit tracking; multi-property
+- P1: Include KTP photos in backup (zip)
+- P2: Deposit tracking; multi-property; filters/sorting for transaction history

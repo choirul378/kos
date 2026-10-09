@@ -1,12 +1,14 @@
 import { useRouter } from "expo-router";
 import { useState } from "react";
-import { FlatList, RefreshControl, Text, TextInput, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { listTenants, Tenant, TenantStatus } from "@/src/db/repo";
+import { DueList } from "@/src/components/DueList";
+import { DueItem, listDueSoon, listTenants, Tenant, TenantStatus } from "@/src/db/repo";
 import { formatDate } from "@/src/format";
 import { useFocusData } from "@/src/hooks";
 import { usesNativeTabs } from "@/src/navigation";
+import { getProfile } from "@/src/settings";
 import { makeStyles, useTheme } from "@/src/theme";
 import { Avatar, Badge, Card, Chips, EmptyState, ErrorState, Fab, fs, Header, Icon, Loading, rad, sp } from "@/src/ui";
 
@@ -19,11 +21,20 @@ export default function TenantsScreen() {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("aktif");
   const [q, setQ] = useState("");
+  const [dueOpen, setDueOpen] = useState(true);
   const bottomChrome = usesNativeTabs ? insets.bottom : 0;
+  const showDue = filter === "aktif" && !q.trim();
 
-  const { data, loading, error, refreshing, refresh, reload } = useFocusData(
-    () => listTenants(filter === "semua" ? undefined : filter, q), [filter, q],
-  );
+  const { data, loading, error, refreshing, refresh, reload } = useFocusData(async () => {
+    const [tenants, due, profile] = await Promise.all([
+      listTenants(filter === "semua" ? undefined : filter, q),
+      showDue ? listDueSoon() : Promise.resolve([] as DueItem[]),
+      getProfile(),
+    ]);
+    return { tenants, due, kosName: profile.kosName };
+  }, [filter, q, showDue]);
+
+  const unpaidDue = data?.due.filter((d) => !d.paid_off).length ?? 0;
 
   const renderItem = ({ item }: { item: Tenant }) => (
     <Card testID={`tenant-card-${item.id}`} style={s.card} onPress={() => router.push(`/tenant/${item.id}`)}>
@@ -45,7 +56,7 @@ export default function TenantsScreen() {
 
   return (
     <View style={s.root} testID="tenants-screen">
-      <Header title="Penghuni" subtitle={data ? `${data.length} penghuni ditampilkan` : undefined} />
+      <Header title="Penghuni" subtitle={data ? `${data.tenants.length} penghuni ditampilkan` : undefined} />
       <View style={s.searchWrap}>
         <Icon name="search" size={18} color={colors.muted} />
         <TextInput testID="tenants-search-input" value={q} onChangeText={setQ} placeholder="Cari nama, no. HP, atau kamar"
@@ -57,12 +68,23 @@ export default function TenantsScreen() {
       />
       {loading ? <Loading /> : error ? <ErrorState message={error} onRetry={reload} /> : (
         <FlatList
-          data={data ?? []}
+          data={data?.tenants ?? []}
           keyExtractor={(t) => String(t.id)}
           renderItem={renderItem}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingHorizontal: sp.lg, paddingTop: sp.xs, paddingBottom: bottomChrome + 96, flexGrow: 1 }}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.brandPrimary} />}
+          ListHeaderComponent={showDue && data ? (
+            <View style={{ marginBottom: sp.sm }}>
+              <Pressable testID="tenants-due-toggle" onPress={() => setDueOpen((v) => !v)} style={s.dueHead}>
+                <Icon name="calendar-outline" size={18} color={colors.brandPrimary} />
+                <Text style={s.dueTitle}>Jatuh Tempo 7 Hari ke Depan</Text>
+                {unpaidDue > 0 && <Badge label={`${unpaidDue} belum`} tone="error" />}
+                <Icon name={dueOpen ? "chevron-up" : "chevron-down"} size={18} color={colors.muted} />
+              </Pressable>
+              {dueOpen && <DueList items={data.due} kosName={data.kosName} testIDPrefix="tenants-due" />}
+            </View>
+          ) : null}
           ListEmptyComponent={
             <EmptyState testID="tenants-empty" icon="people-outline"
               title={q ? "Tidak ditemukan" : "Belum ada penghuni"}
@@ -86,4 +108,6 @@ const useStyles = makeStyles((c) => ({
   meta: { fontSize: fs.sm, color: c.muted, marginTop: 2 },
   roomPill: { backgroundColor: c.brandTertiary, borderRadius: rad.sm, paddingHorizontal: sp.sm, paddingVertical: 3 },
   roomPillText: { color: c.onBrandTertiary, fontSize: fs.sm, fontWeight: "700" },
+  dueHead: { flexDirection: "row", alignItems: "center", gap: sp.sm, paddingVertical: sp.md, minHeight: 44 },
+  dueTitle: { flex: 1, fontSize: fs.lg, fontWeight: "700", color: c.onSurface },
 }));

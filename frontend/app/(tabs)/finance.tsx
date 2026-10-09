@@ -3,12 +3,17 @@ import { useState } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { getDb } from "@/src/db/client";
 import { listFinance, monthSummary } from "@/src/db/repo";
+import { useFeedback } from "@/src/feedback";
 import { currentPeriod, formatDate, periodLabel, rupiah, shiftPeriod } from "@/src/format";
 import { useFocusData } from "@/src/hooks";
 import { usesNativeTabs } from "@/src/navigation";
+import { monthlyReportHtml } from "@/src/report";
+import { getProfile } from "@/src/settings";
+import { sharePdf } from "@/src/share";
 import { makeStyles, useTheme } from "@/src/theme";
-import { Button, Card, EmptyState, ErrorState, fs, Header, Icon, Loading, MonthPicker, Segmented, sp } from "@/src/ui";
+import { Button, Card, EmptyState, ErrorState, fs, Header, Icon, IconButton, Loading, MonthPicker, Segmented, sp } from "@/src/ui";
 
 type Tab = "masuk" | "keluar" | "rekap";
 
@@ -17,13 +22,21 @@ async function loadRecap(period: string) {
   return Promise.all(months.map(async (m) => ({ period: m, ...(await monthSummary(m)) })));
 }
 
+async function loadOccupancy() {
+  const db = await getDb();
+  const r = await db.get<{ total: number; terisi: number | null }>("SELECT COUNT(*) AS total, SUM(CASE WHEN status='terisi' THEN 1 ELSE 0 END) AS terisi FROM rooms");
+  return { total: r?.total ?? 0, terisi: r?.terisi ?? 0 };
+}
+
 export default function FinanceScreen() {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const s = useStyles();
   const router = useRouter();
+  const { toast } = useFeedback();
   const [period, setPeriod] = useState(currentPeriod());
   const [tab, setTab] = useState<Tab>("masuk");
+  const [pdfBusy, setPdfBusy] = useState(false);
   const bottomChrome = usesNativeTabs ? insets.bottom : 0;
 
   const { data, loading, error, refreshing, refresh, reload } = useFocusData(async () => {
@@ -33,12 +46,27 @@ export default function FinanceScreen() {
     return { summary, masuk, keluar, recap };
   }, [period]);
 
+  const exportPdf = async () => {
+    if (!data) return;
+    setPdfBusy(true);
+    try {
+      const [profile, occupancy] = await Promise.all([getProfile(), loadOccupancy()]);
+      const html = monthlyReportHtml({ period, ...profile, summary: data.summary, masuk: data.masuk, keluar: data.keluar, occupancy });
+      await sharePdf(html, `Laporan-${profile.kosName.replace(/[^\w]+/g, "-")}-${period}`, "Bagikan Laporan Bulanan");
+    } catch (e: any) {
+      toast(e?.message ?? "Gagal membuat PDF", "error");
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
   const items = tab === "masuk" ? data?.masuk : data?.keluar;
   const maxBar = Math.max(1, ...(data?.recap ?? []).flatMap((r) => [r.income, r.expense]));
 
   return (
     <View style={s.root} testID="finance-screen">
-      <Header title="Keuangan" subtitle="Arus kas bulanan" />
+      <Header title="Keuangan" subtitle="Arus kas bulanan"
+        right={<IconButton testID="finance-export-pdf" icon="document-text-outline" label="Export laporan PDF" onPress={exportPdf} />} />
       <View style={{ paddingHorizontal: sp.lg }}>
         <MonthPicker testID="finance-month" value={period} onChange={setPeriod} />
       </View>
@@ -83,6 +111,8 @@ export default function FinanceScreen() {
                 {data.summary.byCategory.map((c) => <RecapRow key={c.category} label={`− ${c.category}`} value={-c.total} />)}
                 <RecapRow label="Total pengeluaran" value={-data.summary.expense} bold />
                 <RecapRow label="Saldo bersih" value={data.summary.net} bold />
+                <Button testID="recap-export-pdf" variant="secondary" icon="document-text-outline" title="Export Laporan PDF" loading={pdfBusy}
+                  onPress={exportPdf} style={{ marginTop: sp.md }} />
               </Card>
               <Card testID="recap-chart">
                 <Text style={s.cardTitle}>6 Bulan Terakhir</Text>

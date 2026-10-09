@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { RefreshControl, ScrollView, Text, View, Pressable } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { DueList } from "@/src/components/DueList";
 import { getDashboard } from "@/src/db/repo";
 import { useFeedback } from "@/src/feedback";
 import { billingMessage, currentPeriod, formatDate, periodLabel, rupiah } from "@/src/format";
@@ -105,6 +106,9 @@ export default function Home() {
             ))}
             <View style={{ width: sp.lg - sp.md }} />
           </ScrollView>
+
+          <SectionTitle title="Jatuh Tempo 7 Hari ke Depan" />
+          <DueList items={data.dueSoon} kosName={data.kosName} />
 
           <SectionTitle title={`Belum Bayar · ${periodLabel(period)}`} />
           {data.arrears.length === 0 ? (

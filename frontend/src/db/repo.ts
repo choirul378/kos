@@ -306,6 +306,45 @@ export async function listArrears(period: string): Promise<Arrear[]> {
   return rows.filter((r) => r.paid < r.price).map((r) => ({ ...r, remaining: r.price - r.paid }));
 }
 
+// Jatuh tempo: tanggal masuk penghuni menjadi tanggal tagihan tiap bulan.
+export type DueItem = Arrear & { due_date: string; period: string; days_left: number; paid_off: boolean };
+
+export async function listDueSoon(days = 7, today = todayISO()): Promise<DueItem[]> {
+  const db = await getDb();
+  const rows = await db.all<{ tenant_id: number; name: string; phone: string; room_number: string; price: number; entry_date: string }>(
+    `SELECT t.id AS tenant_id, t.name, t.phone, r.number AS room_number, r.price, t.entry_date
+     FROM tenants t JOIN rooms r ON r.id = t.room_id WHERE t.status = 'aktif'`,
+  );
+  const start = new Date(today + "T00:00:00");
+  const items: DueItem[] = [];
+  for (const r of rows) {
+    const due = nextDueDate(r.entry_date, start);
+    const daysLeft = Math.round((due.getTime() - start.getTime()) / 86400000);
+    if (daysLeft > days) continue;
+    const period = isoLocal(due).slice(0, 7);
+    const paid = await getPaidForPeriod(r.tenant_id, period);
+    items.push({
+      tenant_id: r.tenant_id, name: r.name, phone: r.phone, room_number: r.room_number, price: r.price,
+      paid, remaining: Math.max(r.price - paid, 0), due_date: isoLocal(due), period, days_left: daysLeft, paid_off: paid >= r.price,
+    });
+  }
+  return items.sort((a, b) => a.days_left - b.days_left || Number(a.paid_off) - Number(b.paid_off));
+}
+
+const isoLocal = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+// Tanggal jatuh tempo berikutnya (>= hari ini) dengan hari = tanggal masuk, dibatasi jumlah hari dalam bulan.
+function nextDueDate(entryDate: string, from: Date) {
+  const day = Number(entryDate.slice(8, 10)) || 1;
+  for (let i = 0; i < 3; i++) {
+    const y = from.getFullYear(), m = from.getMonth() + i;
+    const last = new Date(y, m + 1, 0).getDate();
+    const d = new Date(y, m, Math.min(day, last));
+    if (d.getTime() >= from.getTime()) return d;
+  }
+  return from;
+}
+
 export async function getDashboard(period = currentPeriod()) {
   const db = await getDb();
   const counts = await db.get<{ total: number; terisi: number | null; kosong: number | null }>(
@@ -314,12 +353,13 @@ export async function getDashboard(period = currentPeriod()) {
   const arrears = await listArrears(period);
   const summary = await monthSummary(period);
   const recent = await listPayments({ limit: 5 });
+  const dueSoon = await listDueSoon();
   return {
     total: counts?.total ?? 0,
     terisi: counts?.terisi ?? 0,
     kosong: counts?.kosong ?? 0,
     menunggak: new Set(arrears.map((a) => a.room_number)).size,
-    arrears, summary, recent,
+    arrears, summary, recent, dueSoon,
   };
 }
 

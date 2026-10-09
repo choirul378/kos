@@ -113,7 +113,7 @@ setColorScheme?.(themes.dark ? null : defaultScheme);
 
 export function useTheme(): { scheme: ColorScheme; colors: ThemeColors } {
   const system = useColorScheme();
-  const scheme: ColorScheme = system && themes[system] ? system : defaultScheme;
+  const scheme: ColorScheme = system && system !== "unspecified" && themes[system] ? system : defaultScheme;
   return { scheme, colors: themes[scheme] ?? themes.light };
 }
 

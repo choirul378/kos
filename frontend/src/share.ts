@@ -15,8 +15,8 @@ export async function openWhatsApp(phone: string, text: string) {
   await Linking.openURL(url);
 }
 
-// Simpan kuitansi sebagai PDF lokal lalu buka menu bagikan (simpan ke Files/Drive/WA).
-export async function sharePdf(html: string, fileName: string) {
+// Simpan dokumen (kuitansi/laporan) sebagai PDF lokal lalu buka menu bagikan (simpan ke Files/Drive/WA).
+export async function sharePdf(html: string, fileName: string, dialogTitle = "Bagikan Kuitansi") {
   if (Platform.OS === "web") {
     await Print.printAsync({ html });
     return;
@@ -25,7 +25,7 @@ export async function sharePdf(html: string, fileName: string) {
   const target = `${FileSystem.documentDirectory}${fileName}.pdf`;
   await FileSystem.deleteAsync(target, { idempotent: true });
   await FileSystem.moveAsync({ from: uri, to: target });
-  await Sharing.shareAsync(target, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle: "Bagikan Kuitansi" });
+  await Sharing.shareAsync(target, { mimeType: "application/pdf", UTI: "com.adobe.pdf", dialogTitle });
 }
 
 function backupName() {
