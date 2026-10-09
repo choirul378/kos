@@ -35,8 +35,12 @@ function cleanError(e: any) {
 
 async function ensurePermission() {
   if (Platform.OS !== "android" || Number(Platform.Version) < 31) return;
-  const r = await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT);
-  if (r !== PermissionsAndroid.RESULTS.GRANTED) throw new Error("Izin Bluetooth ditolak. Aktifkan izin 'Perangkat sekitar' untuk DSKos");
+  const r = await PermissionsAndroid.requestMultiple([
+    PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+    PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+  ]);
+  const granted = Object.values(r).every((v) => v === PermissionsAndroid.RESULTS.GRANTED);
+  if (!granted) throw new Error("Izin Bluetooth ditolak. Aktifkan izin 'Perangkat sekitar' untuk DSKos");
 }
 
 export async function listPairedPrinters() {

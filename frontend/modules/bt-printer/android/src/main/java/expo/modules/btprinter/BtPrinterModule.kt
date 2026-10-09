@@ -45,7 +45,7 @@ class BtPrinterModule : Module() {
 
     AsyncFunction("print") { address: String, data: String ->
       val a = adapter()
-      a.cancelDiscovery()
+      try { a.cancelDiscovery() } catch (_: Exception) {}
       val socket = try {
         open(a.getRemoteDevice(address))
       } catch (e: Exception) {
