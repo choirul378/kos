@@ -1,0 +1,25 @@
+{
+  "summary": "Frontend-only end-to-end testing of two new KosManager features. All acceptance criteria pass. (1) 'Jatuh Tempo 7 Hari ke Depan' section on Beranda correctly lists active tenants whose next due date (day = entry_date day-of-month) falls within today..today+7. Unpaid tenants (T1) show Belum badge + Ingatkan/Catat Bayar buttons; fully-paid (T3) shows Lunas badge with no action buttons; T2 (15 days away) correctly excluded. 'Hari ini' and 'N hari lagi' labels render correctly. (2) Tapping due-<id>-pay navigates to /payment-form with tenantId and period params pre-filled (period label e.g. 'Oktober 2026'). (3) Penghuni tab: tenants-due-toggle header appears only when filter=aktif AND search empty; collapses/expands DueList; shows '2 belum' count badge; correctly hidden on alumni/semua filter and when search query present. (4) Finance tab: both finance-export-pdf (header) and recap-export-pdf (Rekap tab) invoke window.print via Print.printAsync on web without any 'Gagal membuat PDF' toast. (5) Regression: dashboard stats (3 rooms, 3 terisi, 2 menunggak after T3 paid), hero income Rp 1.000.000, Belum Bayar list and Finance lists still render correctly. TypeScript compile (tsc --noEmit) passes with no errors.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "src/db/repo.ts listArrears uses period + '-31' as upper bound for entry_date comparison — works for current needs but relies on lexicographic string compare; fine for ISO dates.",
+    "src/db/repo.ts listDueSoon fetches ALL active tenants then filters in JS; acceptable for small kos, could be optimized by filtering in SQL if dataset grows.",
+    "src/components/DueList.tsx: dateMon uses formatDate(d.due_date).split(' ')[1] which depends on date format consistency — currently fine ('09 Okt 2026').",
+    "src/share.ts sharePdf web branch awaits Print.printAsync which opens native print dialog; on web preview this reliably triggers window.print (verified)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "Rooms A1/A2/A3 (price 1.000.000) and 3 tenants (T1 entry 2026-07-11 due today+2, T2 entry 2026-07-24 due ~15d, T3 entry 2026-07-09 due today) created via UI. Payment of Rp 1.000.000 (lunas) recorded for T3 for period 2026-10. Data persists only in sql.js in-memory DB per browser session.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Current system date on preview container is 2026-10-09 (not Jan 2026 as PRD stated). sql.js on web uses in-memory DB (data resets on fresh browser session, not persisted in IndexedDB). payment-form tenant chips use testID 'payment-tenant-<id>' but are inside a horizontal ScrollView — must call scroll_into_view_if_needed() before clicking the chip. After tenant save, the app navigates to /tenant/<id> (detail screen) via router.replace, not back to tenants list — use header-back-button or tab bar to continue. Tab bar testIDs: tab-index, tab-rooms, tab-tenants, tab-finance.",
+  "rca_of_issue": "N/A — no bugs found. Both new features (DueList on Beranda/Penghuni and PDF export in Finance) work as specified."
+}
